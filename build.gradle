@@ -1,0 +1,113 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+group = 'org.xblackcat.ant'
+def projectTitle = 'Ant task for generating passwords'
+
+version = new File('build-version.txt').getText('UTF-8')
+ext.commonManifest = manifest {
+    attributes(
+            "Implementation-Title": projectTitle,
+            "Implementation-Version": version
+    )
+}
+
+jar {
+    manifest = project.manifest {
+        from commonManifest
+        attributes(
+                'Main-Class': 'org.xblackcat.ant.p200ant.Main'
+        )
+    }
+}
+
+defaultTasks 'clean', 'build'
+
+compileJava.options.encoding = 'UTF-8'
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'org.apache.ant', name: 'ant', version: '[1.10,2.0)'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    classifier = 'sources'
+    manifest = project.manifest {
+        from commonManifest
+    }
+}
+
+javadoc {
+    title = projectTitle
+}
+
+task javadocJar(dependsOn: javadoc, type: Jar) {
+    from javadoc.outputs.files
+    classifier = 'javadoc'
+    manifest = project.manifest {
+        from commonManifest
+    }
+}
+
+artifacts {
+    archives jar
+    archives javadocJar
+    archives sourcesJar
+}
+
+signing {
+    sign configurations.archives
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: mavenCentralUrl) {
+                authentication(userName: mavenCentralUser, password: mavenCentralPassword)
+            }
+
+            pom.project {
+                name projectTitle
+                packaging 'jar'
+                description 'Ant task for generating passwords'
+                url 'https://github.com/xBlackCat/pswdgen-ant-task'
+
+                scm {
+                    url 'scm:git@github.com:xBlackCat/pswdgen-ant-task.git'
+                    connection 'scm:git@github.com:xBlackCat/pswdgen-ant-task.git'
+                    developerConnection 'scm:git@github.com:xBlackCat/pswdgen-ant-task.git'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'xBlackCat'
+                        name 'Zhukov Alexei'
+                        email 'xblackcat@gmail.com'
+                    }
+                }
+            }
+
+        }
+    }
+}
