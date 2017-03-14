@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 public class P200AntTask
         extends Task {
@@ -21,6 +22,7 @@ public class P200AntTask
     private File srcfile;
     private boolean createPACK;
     private boolean createGZ = true;
+    private boolean quite;
 
     public void setKeepOrder(boolean enabled) {
         this.engine.setKeepOrder(enabled);
@@ -66,8 +68,22 @@ public class P200AntTask
         this.filesets.add(set);
     }
 
+    public void setQuite(boolean quite) {
+        this.quite = quite;
+    }
+
     public void execute() throws BuildException {
         this.validate();
+
+        final Level level;
+        if (quite) {
+            level = Level.SEVERE;
+        } else {
+            level = Level.ALL;
+        }
+
+        engine.setLevel(level);
+
         List<File> files = new ArrayList<>();
         if (this.srcfile != null) {
             files.add(this.srcfile);

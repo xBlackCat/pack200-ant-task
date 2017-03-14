@@ -1,12 +1,14 @@
 package org.xblackcat.ant.p200ant;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Pack200;
+import java.util.logging.Level;
 import java.util.zip.GZIPOutputStream;
 
 /*
@@ -18,11 +20,21 @@ public class Engine {
     private static final String PACK_SEGMENT_LIMIT = "pack.segment.limit";
     private static final String PACK_EFFORT = "pack.effort";
     private static final String PACK_CODE_ATTRIBUTE_LOCAL_VARIABLE_TABLE = "pack.code.attribute.LocalVariableTable";
-    
+
     private final Properties props = new Properties();
     private File destDir;
+    private Level level;
+    private Method setLevel;
+    private Method getLogger;
 
     public Engine() {
+        try {
+            Class<?> lsc = Class.forName("sun.util.logging.LoggingSupport");
+            setLevel = lsc.getMethod("setLevel", Object.class, Object.class);
+            getLogger = lsc.getMethod("getLogger", String.class);
+        } catch (ReflectiveOperationException e) {
+            e.printStackTrace();
+        }
         this.setProperty(Engine.PACK_KEEP_FILE_ORDER, "false");
         this.setProperty(Engine.PACK_MODIFICATION_TIME, "latest");
         this.setProperty(Engine.PACK_EFFORT, "9");
@@ -58,6 +70,10 @@ public class Engine {
         this.setProperty(Engine.PACK_SEGMENT_LIMIT, Integer.toString(size));
     }
 
+    public void setLevel(Level level) {
+        this.level = level;
+    }
+
     private void setProperty(String key, String value) {
         this.props.put(key, value);
     }
@@ -70,6 +86,15 @@ public class Engine {
     }
 
     private void copyTo(Map<String, String> target) {
+        if (getLogger != null && setLevel != null) {
+            // Try to set logging level
+            try {
+                Object logger = getLogger.invoke(null, "java.util.jar.Pack200");
+                setLevel.invoke(null, logger, level);
+            } catch (ReflectiveOperationException e) {
+                // ignore:
+            }
+        }
         for (Map.Entry e : this.props.entrySet()) {
             if (e.getKey().getClass() != String.class || e.getValue().getClass() != String.class) {
                 continue;
